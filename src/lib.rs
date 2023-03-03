@@ -4,6 +4,7 @@
 //! The code is greatly inspired by [Phil Opp's blog](https://os.phil-opp.com/), and his [crate](
 //! https://github.com/rust-osdev/x86_64)
 #![cfg_attr(not(test), no_std)]
+#![feature(linkage)]
 #![feature(asm_const)]
 #![feature(naked_functions)]
 #![warn(clippy::all)]

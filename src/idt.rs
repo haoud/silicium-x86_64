@@ -334,6 +334,7 @@ macro_rules! interrupt_handler {
 ///
 #[naked]
 #[no_mangle]
+#[linkage = "weak"]
 #[cfg(feature = "int_handler")]
 pub unsafe extern "C" fn interrupt_enter() {
     asm!(
@@ -394,6 +395,7 @@ pub unsafe extern "C" fn interrupt_enter() {
 /// - Perform an `iretq` instruction to restore the context.
 #[naked]
 #[no_mangle]
+#[linkage = "weak"]
 #[cfg(feature = "int_handler")]
 pub unsafe extern "C" fn interrupt_exit() {
     asm!(
