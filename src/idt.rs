@@ -273,6 +273,7 @@ impl Register {
 ///
 /// Failure to follow these rules will result in a undefined behavior, likely a crash.
 #[macro_export]
+#[cfg(feature = "int_handler")]
 macro_rules! interrupt_handler {
     // Generate an interrupt handler that pushes an error code on the stack (for example, a page
     // fault)
@@ -333,6 +334,7 @@ macro_rules! interrupt_handler {
 ///
 #[naked]
 #[no_mangle]
+#[cfg(feature = "int_handler")]
 pub unsafe extern "C" fn interrupt_enter() {
     asm!(
         "
@@ -392,6 +394,7 @@ pub unsafe extern "C" fn interrupt_enter() {
 /// - Perform an `iretq` instruction to restore the context.
 #[naked]
 #[no_mangle]
+#[cfg(feature = "int_handler")]
 pub unsafe extern "C" fn interrupt_exit() {
     asm!(
         "
