@@ -6,6 +6,7 @@
 #![cfg_attr(not(test), no_std)]
 #![feature(linkage)]
 #![feature(asm_const)]
+#![feature(step_trait)]
 #![feature(naked_functions)]
 #![warn(clippy::all)]
 #![warn(clippy::pedantic)]

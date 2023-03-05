@@ -1,10 +1,4 @@
-use core::ops::{Add, AddAssign, Sub, SubAssign};
-
-
-pub trait Address {
-    fn from_u64(address: u64) -> Self;
-    fn as_u64(&self) -> u64;
-}
+use core::{ops::{Add, AddAssign, Sub, SubAssign}, iter::Step};
 
 /// A canonical 64-bit virtual memory address.
 ///
@@ -92,6 +86,11 @@ impl Virtual {
     }
 
     #[must_use]
+    pub const fn as_u64(&self) -> u64 {
+        self.0
+    }
+
+    #[must_use]
     pub const fn null() -> Self {
         Self(0)
     }
@@ -167,7 +166,7 @@ impl Virtual {
     /// function does nothing.
     #[must_use]
     pub const fn page_align_down(&self) -> Self {
-        Self::new_truncate(self.0 & 0xFFF)
+        Self::new_truncate(self.0 &!0xFFF)
     }
 
     /// Checks if the address is aligned to a page boundary (4 KiB).
@@ -225,13 +224,29 @@ impl Virtual {
     }
 }
 
-impl Address for Virtual {
-    fn from_u64(address: u64) -> Self {
-        Self::new(address)
+impl Step for Virtual {
+    fn steps_between(start: &Self, end: &Self) -> Option<usize> {
+        let steps = end.0.checked_sub(start.0)?;
+        if !Virtual::is_canonical(start.0) || !Virtual::is_canonical(end.0) {
+            panic!("Steps between non-canonical addresses");
+        } 
+        usize::try_from(steps).ok()
     }
 
-    fn as_u64(&self) -> u64 {
-        self.0
+    fn forward_checked(start: Self, count: usize) -> Option<Self> {
+        let new = start.0.checked_add(count as u64)?;
+        if !Virtual::is_canonical(new) {
+            return None;
+        }
+        Some(Self::new(new))
+    }
+
+    fn backward_checked(start: Self, count: usize) -> Option<Self> {
+        let new = start.0.checked_sub(count as u64)?;
+        if !Virtual::is_canonical(new) {
+            return None;
+        }
+        Some(Self::new(new))
     }
 }
 
@@ -326,41 +341,58 @@ impl SubAssign<usize> for Virtual {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Range<T> {
-    start: T,
-    end: T,
+pub struct VirtualRange {
+    start: Virtual,
+    end: Virtual,
 }
 
-impl<T> Range<T> where T: Address + Copy {
+impl VirtualRange {
     #[must_use]
-    pub const fn new(start: T, end: T) -> Self {
+    pub const fn new(start: Virtual, end: Virtual) -> Self {
         Self { start, end }
     }
 
     #[must_use]
-    pub fn range(start: T, size: usize) -> Self {
-        let end = T::from_u64(start.as_u64() + size as u64);
+    pub fn range(start: Virtual, size: usize) -> Self {
+        let end = start + size;
         Self { start, end }
     }
 
     #[must_use]
-    pub const fn start(&self) -> T {
+    pub const fn start(&self) -> Virtual {
         self.start
     }
 
     #[must_use]
-    pub const fn end(&self) -> T {
+    pub const fn end(&self) -> Virtual {
         self.end
     }
 
     #[must_use]
-    pub fn size(&self) -> usize {
-        (self.end.as_u64() - self.start.as_u64()) as usize
+    pub const fn size(&self) -> usize {
+        (self.end.0 - self.start.0) as usize
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = Virtual> {
+        self.start..self.end
+    }
+
+    #[must_use]
+    pub const fn contains_range(&self, other: &Self) -> bool {
+        self.start.0 <= other.start.0 && other.end.0 <= self.end.0
+    }
+
+    #[must_use]
+    pub const fn contains(&self, address: Virtual) -> bool {
+        self.start.0 <= address.0 && address.0 < self.end.0
+    }
+
+    #[must_use]
+    pub const fn intersects_with(&self, other: &Self) -> bool {
+        self.start.0 < other.end.0 && other.start.0 < self.end.0
     }
 }
 
-pub type PhysicalRange = Range<Physical>;
-pub type VirtualRange = Range<Virtual>;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
@@ -403,6 +435,12 @@ impl Physical {
         Self(addr & 0x000F_FFFF_FFFF_FFFF)
     }
 
+    /// Checks if an address would be valid if it was truncated to 52 bits.
+    #[must_use]
+    pub const fn is_valid(address: u64) -> bool {
+        address <= 0x000F_FFFF_FFFF_FFFF
+    }
+
     /// Creates a new physical address without checking if it is valid.
     ///
     /// # Safety
@@ -426,6 +464,11 @@ impl Physical {
     #[must_use]
     pub const fn as_mut_ptr<T>(&self) -> *mut T {
         self.as_ptr::<T>() as *mut T
+    }
+
+    #[must_use]
+    pub const fn as_u64(&self) -> u64 {
+        self.0
     }
 
     #[must_use]
@@ -491,7 +534,7 @@ impl Physical {
     /// function does nothing.
     #[must_use]
     pub const fn page_align_down(&self) -> Self {
-        Self::new_truncate(self.0 & 0xFFF)
+        Self::new_truncate(self.0 & !0xFFF)
     }
 
     /// Checks if the address is aligned to a page boundary (4 KiB).
@@ -506,14 +549,27 @@ impl Physical {
     }
 }
 
-impl Address for Physical {
-    #[must_use]
-    fn as_u64(&self) -> u64 {
-        self.0
+impl Step for Physical {
+    fn steps_between(start: &Self, end: &Self) -> Option<usize> {
+        end.0.checked_sub(start.0).map(|x| x as usize)
     }
 
-    fn from_u64(address: u64) -> Self {
-        Self::new(address)
+    fn forward_checked(start: Self, count: usize) -> Option<Self> {
+        let new = start.0.checked_add(count as u64)?;
+        if Physical::is_valid(new) {
+            Some(Self::new(new))
+        } else {
+            None
+        }
+    }
+
+    fn backward_checked(start: Self, count: usize) -> Option<Self> {
+        let new = start.0.checked_sub(count as u64)?;
+        if Physical::is_valid(new) {
+            Some(Self::new(new))
+        } else {
+            None
+        }
     }
 }
 
