@@ -367,9 +367,19 @@ pub unsafe extern "C" fn interrupt_enter() {
         push rbx
         push rbp
 
-        # Save FS
-        push fs
-        # TODO: Set FS to the right value 
+        # RDMSR for saving the FS register
+        mov rax, 0xC0000100
+        rdmsr
+        push rdx
+
+        # Get the kernel GS register with RDMSR
+        mov rax, 0xC0000101
+        rdmsr
+
+        # Set the FS register with WRMSR
+        mov rdx, rax
+        mov rax, 0xC0000100
+        wrmsr
 
         # Stack should be aligned on a 16 bytes boundary
         # Prepare the argument for the handler
@@ -401,7 +411,9 @@ pub unsafe extern "C" fn interrupt_exit() {
     asm!(
         "
         # Restore FS
-        pop fs
+        pop rdx
+        mov rax, 0xC0000100
+        wrmsr
 
         # Restore preserved registers
         pop rbp
