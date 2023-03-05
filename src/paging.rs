@@ -3,7 +3,7 @@ pub const PAGE_SIZE: usize = 4096;
 pub const PAGE_MASK: usize = !(PAGE_SIZE - 1);
 pub const PAGE_OFFSET_MASK: usize = PAGE_SIZE - 1;
 
-use crate::address::Physical;
+use crate::address::{Physical, Address};
 use bitflags::bitflags;
 use core::ops::{Index, IndexMut};
 
@@ -16,7 +16,7 @@ impl PageEntry {
     const EMPTY: Self = Self(0);
 
     #[must_use]
-    pub const fn new(addr: Physical, flags: PageEntryFlags) -> Self {
+    pub fn new(addr: Physical, flags: PageEntryFlags) -> Self {
         assert!(addr.is_page_aligned(), "Address is not page aligned");
         Self((addr.as_u64() & Self::ADDR_MASK) | flags.bits())
     }

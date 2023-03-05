@@ -1,5 +1,11 @@
 use core::ops::{Add, AddAssign, Sub, SubAssign};
 
+
+pub trait Address {
+    fn from_u64(address: u64) -> Self;
+    fn as_u64(&self) -> u64;
+}
+
 /// A canonical 64-bit virtual memory address.
 ///
 /// On `x86_64`, only the 48 lower bits of a virtual address can be used. This type guarantees that
@@ -76,12 +82,12 @@ impl Virtual {
     }
 
     #[must_use]
-    pub const fn as_ptr<T>(self) -> *const T {
-        self.as_u64() as *const T
+    pub const fn as_ptr<T>(&self) -> *const T {
+        self.0 as *const T
     }
 
     #[must_use]
-    pub const fn as_mut_ptr<T>(self) -> *mut T {
+    pub const fn as_mut_ptr<T>(&self) -> *mut T {
         self.as_ptr::<T>() as *mut T
     }
 
@@ -96,12 +102,7 @@ impl Virtual {
     }
 
     #[must_use]
-    pub const fn as_u64(self) -> u64 {
-        self.0
-    }
-
-    #[must_use]
-    pub const fn is_null(self) -> bool {
+    pub const fn is_null(&self) -> bool {
         self.0 == 0
     }
 
@@ -111,7 +112,7 @@ impl Virtual {
     /// # Panics
     /// This function panics if the given alignment is not a power of two.
     #[must_use]
-    pub fn align_up<T>(self, alignment: T) -> Self
+    pub fn align_up<T>(&self, alignment: T) -> Self
     where
         T: Into<u64>,
     {
@@ -129,7 +130,7 @@ impl Virtual {
     /// # Panics
     /// This function panics if the given alignment is not a power of two.
     #[must_use]
-    pub fn align_down<T>(self, alignment: T) -> Self
+    pub fn align_down<T>(&self, alignment: T) -> Self
     where
         T: Into<u64>,
     {
@@ -143,7 +144,7 @@ impl Virtual {
     /// # Panics
     /// This function panics if the given alignment is not a power of two.
     #[must_use]
-    pub fn is_aligned<T>(self, alignment: T) -> bool
+    pub fn is_aligned<T>(&self, alignment: T) -> bool
     where
         T: Into<u64>,
     {
@@ -176,7 +177,7 @@ impl Virtual {
     }
 
     #[must_use]
-    pub const fn page_offset(self) -> u64 {
+    pub const fn page_offset(&self) -> u64 {
         self.0 & 0xFFF
     }
 
@@ -187,40 +188,50 @@ impl Virtual {
     }
 
     #[must_use]
-    pub const fn pt_offset(self) -> u64 {
+    pub const fn pt_offset(&self) -> u64 {
         self.page_index(1)
     }
 
     #[must_use]
-    pub const fn pd_offset(self) -> u64 {
+    pub const fn pd_offset(&self) -> u64 {
         self.page_index(2)
     }
 
     #[must_use]
-    pub const fn pdpt_offset(self) -> u64 {
+    pub const fn pdpt_offset(&self) -> u64 {
         self.page_index(3)
     }
 
     #[must_use]
-    pub const fn pml4_offset(self) -> u64 {
+    pub const fn pml4_offset(&self) -> u64 {
         self.page_index(4)
     }
 
     #[must_use]
-    pub const fn pml5_offset(self) -> u64 {
+    pub const fn pml5_offset(&self) -> u64 {
         self.page_index(5)
     }
 
     /// Checks if the address is in the kernel address space.
     #[must_use]
-    pub const fn is_kernel(self) -> bool {
+    pub const fn is_kernel(&self) -> bool {
         self.0 >= 0xFFFF_8000_0000_0000
     }
 
     /// Checks if the address is in the user address space.
     #[must_use]
-    pub const fn is_user(self) -> bool {
+    pub const fn is_user(&self) -> bool {
         !self.is_kernel()
+    }
+}
+
+impl Address for Virtual {
+    fn from_u64(address: u64) -> Self {
+        Self::new(address)
+    }
+
+    fn as_u64(&self) -> u64 {
+        self.0
     }
 }
 
@@ -315,6 +326,43 @@ impl SubAssign<usize> for Virtual {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Range<T> {
+    start: T,
+    end: T,
+}
+
+impl<T> Range<T> where T: Address + Copy {
+    #[must_use]
+    pub const fn new(start: T, end: T) -> Self {
+        Self { start, end }
+    }
+
+    #[must_use]
+    pub fn range(start: T, size: usize) -> Self {
+        let end = T::from_u64(start.as_u64() + size as u64);
+        Self { start, end }
+    }
+
+    #[must_use]
+    pub const fn start(&self) -> T {
+        self.start
+    }
+
+    #[must_use]
+    pub const fn end(&self) -> T {
+        self.end
+    }
+
+    #[must_use]
+    pub fn size(&self) -> usize {
+        (self.end.as_u64() - self.start.as_u64()) as usize
+    }
+}
+
+pub type PhysicalRange = Range<Physical>;
+pub type VirtualRange = Range<Virtual>;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 pub struct Physical(u64);
 
@@ -371,12 +419,12 @@ impl Physical {
     }
 
     #[must_use]
-    pub const fn as_ptr<T>(self) -> *const T {
-        self.as_u64() as *const T
+    pub const fn as_ptr<T>(&self) -> *const T {
+        self.0 as *const T
     }
 
     #[must_use]
-    pub const fn as_mut_ptr<T>(self) -> *mut T {
+    pub const fn as_mut_ptr<T>(&self) -> *mut T {
         self.as_ptr::<T>() as *mut T
     }
 
@@ -391,17 +439,12 @@ impl Physical {
     }
 
     #[must_use]
-    pub const fn as_u64(self) -> u64 {
-        self.0
-    }
-
-    #[must_use]
     pub const fn is_null(self) -> bool {
         self.0 == 0
     }
 
     #[must_use]
-    pub fn align_up<T>(self, alignment: T) -> Self
+    pub fn align_up<T>(&self, alignment: T) -> Self
     where
         T: Into<u64>,
     {
@@ -415,7 +458,7 @@ impl Physical {
     }
 
     #[must_use]
-    pub fn align_down<T>(self, alignment: T) -> Self
+    pub fn align_down<T>(&self, alignment: T) -> Self
     where
         T: Into<u64>,
     {
@@ -425,7 +468,7 @@ impl Physical {
     }
 
     #[must_use]
-    pub fn is_aligned<T>(self, alignment: T) -> bool
+    pub fn is_aligned<T>(&self, alignment: T) -> bool
     where
         T: Into<u64>,
     {
@@ -458,8 +501,19 @@ impl Physical {
     }
 
     #[must_use]
-    pub const fn frame_index(self) -> u64 {
+    pub const fn frame_index(&self) -> u64 {
         self.0 >> 12
+    }
+}
+
+impl Address for Physical {
+    #[must_use]
+    fn as_u64(&self) -> u64 {
+        self.0
+    }
+
+    fn from_u64(address: u64) -> Self {
+        Self::new(address)
     }
 }
 
