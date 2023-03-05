@@ -395,3 +395,29 @@ pub mod cr4 {
         write(read() & !flags.bits());
     }
 }
+
+pub mod msr {
+    use core::arch::asm;
+
+    pub enum Register {
+        Efer = 0xC0000080,
+        Star = 0xC0000081,
+        Lstar = 0xC0000082,
+        Cstar = 0xC0000083,
+        Fmask = 0xC0000084,
+        FsBase = 0xC0000100,
+        GsBase = 0xC0000101,
+        KernelGsBase = 0xC0000102,
+    }
+
+    pub unsafe fn write(msr: Register, value: u64) {
+        asm!("wrmsr", in("ecx") msr as u32, in("eax") (value as u32), in("edx") (value >> 32));
+    }
+
+    pub unsafe fn read(msr: Register) -> u64 {
+        let low: u32;
+        let high: u32;
+        asm!("rdmsr", in("ecx") msr as u32, out("eax") low, out("edx") high);
+        (high as u64) << 32 | (low as u64)
+    }
+}
