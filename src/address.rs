@@ -1,4 +1,4 @@
-use core::{ops::{Add, AddAssign, Sub, SubAssign}, iter::Step};
+use core::{ops::{Add, AddAssign, Sub, SubAssign}, iter::Step, fmt};
 
 /// A canonical 64-bit virtual memory address.
 ///
@@ -247,6 +247,42 @@ impl Step for Virtual {
             return None;
         }
         Some(Self::new(new))
+    }
+}
+
+impl fmt::Binary for Virtual {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Binary::fmt(&self.0, f)
+    }
+}
+
+impl fmt::Octal for Virtual {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Octal::fmt(&self.0, f)
+    }
+}
+
+impl fmt::LowerHex for Virtual {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::LowerHex::fmt(&self.0, f)
+    }
+}
+
+impl fmt::UpperHex for Virtual {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::UpperHex::fmt(&self.0, f)
+    }
+}
+
+impl fmt::Pointer for Virtual {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Pointer::fmt(&(self.0 as *const ()), f)
+    }
+}
+
+impl fmt::Display for Virtual {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "0x{:016x}", self.0)
     }
 }
 
@@ -570,6 +606,42 @@ impl Step for Physical {
         } else {
             None
         }
+    }
+}
+
+impl fmt::Binary for Physical {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Binary::fmt(&self.0, f)
+    }
+}
+
+impl fmt::Octal for Physical {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Octal::fmt(&self.0, f)
+    }
+}
+
+impl fmt::LowerHex for Physical {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::LowerHex::fmt(&self.0, f)
+    }
+}
+
+impl fmt::UpperHex for Physical {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::UpperHex::fmt(&self.0, f)
+    }
+}
+
+impl fmt::Pointer for Physical {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Pointer::fmt(&(self.0 as *const ()), f)
+    }
+}
+
+impl fmt::Display for Physical {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "0x{:016x}", self.0)
     }
 }
 
