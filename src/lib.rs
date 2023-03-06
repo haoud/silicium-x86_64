@@ -21,6 +21,7 @@ pub mod idt;
 pub mod io;
 pub mod irq;
 pub mod paging;
+pub mod pic;
 pub mod segment;
 pub mod serial;
 pub mod tss;
