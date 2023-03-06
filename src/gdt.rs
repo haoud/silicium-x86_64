@@ -65,10 +65,7 @@ impl<const N: usize> Table<N> {
             self.descriptors[index] = Entry::new(*x);
         } else if let Descriptor::System(x, y) = descriptor {
             assert!(
-                self.descriptors[index + 1] == Entry::NULL,
-                "GDT entry is already in use"
-            );
-            assert!(
+                self.descriptors[index + 1] == Entry::NULL &&
                 self.descriptors[index] == Entry::NULL,
                 "GDT entry is already in use"
             );
