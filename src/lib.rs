@@ -20,6 +20,7 @@ pub mod gdt;
 pub mod idt;
 pub mod io;
 pub mod irq;
+pub mod lapic;
 pub mod paging;
 pub mod pic;
 pub mod segment;
