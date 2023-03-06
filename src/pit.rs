@@ -5,10 +5,10 @@ static CHANNEL_1: Port<u8> = unsafe { Port::new(0x41) };
 static CHANNEL_2: Port<u8> = unsafe { Port::new(0x42) };
 static COMMAND: Port<u8> = unsafe { Port::new(0x43) };
 
-const PIT_TICK_NS: u64 = 1_000_000_000 / 1_193_180;
-const PIT_FREQ: u64 = 1_193_180;
-const MAX_FREQ: u64 = PIT_FREQ / 2;
-const MIN_FREQ: u64 = 1;
+pub const PIT_TICK_NS: u64 = 1_000_000_000 / 1_193_180;
+pub const PIT_FREQ: u64 = 1_193_180;
+pub const MAX_FREQ: u64 = PIT_FREQ / 2;
+pub const MIN_FREQ: u64 = 1;
 
 /// Represents a Programmable Interval Timer (PIT).
 pub struct Pit {
@@ -62,6 +62,12 @@ impl Pit {
         // Calculate the elapsed time since the last IRQ
         let elapsed = self.latch - counter;
         elapsed * PIT_TICK_NS
+    }
+
+    /// Returns the latch value of the PIT, which is the value that the counter is reset to when it
+    /// reaches 0.
+    pub fn get_latch(&self) -> u64 {
+        self.latch
     }
 
     /// Returns the frequency of the PIT, in Hz.
