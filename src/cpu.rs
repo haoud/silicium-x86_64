@@ -140,16 +140,6 @@ pub unsafe fn invlpg(address: u64) {
     asm!("invlpg [{}]", in(reg) address, options(readonly, nostack, preserves_flags));
 }
 
-/// Read the current value of the control register 2 (CR2).
-#[must_use]
-pub fn read_cr2() -> u64 {
-    let value: u64;
-    unsafe {
-        asm!("mov {}, cr2", out(reg) value, options(nostack, preserves_flags));
-    }
-    value
-}
-
 pub mod cr0 {
     use core::arch::asm;
 

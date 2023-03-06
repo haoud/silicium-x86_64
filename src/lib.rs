@@ -26,6 +26,7 @@ pub mod pic;
 pub mod pit;
 pub mod segment;
 pub mod serial;
+pub mod tsc;
 pub mod tss;
 
 pub mod prelude {
