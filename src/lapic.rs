@@ -5,7 +5,7 @@ use crate::address::Virtual;
 static LAPIC_BASE: AtomicU64 = AtomicU64::new(0);
 
 /// Represents the local APIC registers. The values are the offsets from the
-/// base address of the local APIC. See Intel SDM Vol. 3A, 10.5.1.
+/// base address of the local APIC.
 pub enum Register {
     Id = 0x0020,
     Version = 0x0030,
@@ -61,16 +61,34 @@ pub enum Register {
 
     DivideConfiguration = 0x03E0,
 }
+
+/// Represents the destination of an IPI.
 pub enum IpiDestination {
+    /// Send the IPI to the given core.
     Core(u8),
+
+    /// Send the IPI to the current core.
     SelfOnly,
+
+    /// Send the IPI to all cores, including the current one.
     AllCores,
+
+    /// Send the IPI to all cores, except the current one.
     OtherCores,
 }
 
 pub enum IpiPriority {
+    /// Normal priority.
     Normal = 0,
+
+    /// Low priority.
     Low = 1,
+
+    /// ???
+    Smi = 2,
+
+    /// NMI priority. Send an NMI instead of an IPI, the interrupt vector is ignored.
+    Nmi = 4,
     // ...
 }
 
@@ -84,6 +102,19 @@ pub enum IpiPriority {
 pub unsafe fn setup(base: Virtual) {
     assert!(base.is_page_aligned());
     LAPIC_BASE.store(base.as_u64(), Ordering::Relaxed);
+}
+
+/// Enable the local APIC by setting the spurious interrupt vector register. This function must be
+/// called after the `setup` function, and for each core in the system.
+pub unsafe fn enable() {
+    let spurious = read(Register::SpuriousInterruptVector);
+    write(Register::SpuriousInterruptVector, spurious | 1 << 8);
+}
+
+/// Check if the local APIC has been initialized. This is useful to check if we can*
+/// use the local APIC, especially in the early boot process.
+pub fn initialized() -> bool {
+    LAPIC_BASE.load(Ordering::Relaxed) != 0
 }
 
 /// Send an IPI to the given destination with the given priorit to trigger the
@@ -100,13 +131,13 @@ pub unsafe fn send_ipi(destination: IpiDestination, priority: IpiPriority, vecto
             (u32::from(core) << 24, u32::from(vector) | (priority as u32) << 8)
         },
         IpiDestination::SelfOnly => {
-            (0, u32::from(vector) | (priority as u32) << 8 | 1 << 18)
+            (0, u32::from(vector) | ((priority as u32) << 8) | 1 << 18)
         },
         IpiDestination::AllCores => {
-            (0, u32::from(vector) | (priority as u32) << 8 | 2 << 18)
+            (0, u32::from(vector) | ((priority as u32) << 8) | 2 << 18)
         },
         IpiDestination::OtherCores => {
-            (0, u32::from(vector) | (priority as u32) << 8 | 3 << 18)
+            (0, u32::from(vector) | ((priority as u32) << 8) | 3 << 18)
         },
     };
 
@@ -120,7 +151,7 @@ pub unsafe fn send_ipi(destination: IpiDestination, priority: IpiPriority, vecto
 }
 
 /// Write the given value to the given register.
-fn write(register: Register, value: u32) {
+pub unsafe fn write(register: Register, value: u32) {
     let base = LAPIC_BASE.load(Ordering::Relaxed);
     let addr = base + register as u64;
     let ptr = addr as *mut u32;
@@ -130,7 +161,7 @@ fn write(register: Register, value: u32) {
 }
 
 /// Read the value of the given register.
-fn read(register: Register) -> u32 {
+pub unsafe fn read(register: Register) -> u32 {
     let base = LAPIC_BASE.load(Ordering::Relaxed);
     let addr = base + register as u64;
     let ptr = addr as *const u32;
