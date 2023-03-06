@@ -94,7 +94,7 @@ pub enum IpiPriority {
 
 /// Setup the local APIC. This function must be called before any other function in this module.
 /// The parameter is the base virtual address of the local APIC.
-/// 
+///
 /// # Safety
 /// This function is unsafe because the caller must ensure that the given base address is valid,
 /// and is a virtual address that points to the local APIC (and not a physical address !). When
@@ -119,7 +119,7 @@ pub fn initialized() -> bool {
 
 /// Send an IPI to the given destination with the given priorit to trigger the
 /// given interrupt vector.
-/// 
+///
 /// # Safety
 /// This function is unsafe because the caller must ensure that the given
 /// interrupt vector is valid and can be triggered by an IPI. Furthermore, the caller needs to
@@ -127,18 +127,13 @@ pub fn initialized() -> bool {
 /// the local APIC.
 pub unsafe fn send_ipi(destination: IpiDestination, priority: IpiPriority, vector: u8) {
     let cmd = match destination {
-        IpiDestination::Core(core) => {
-            (u32::from(core) << 24, u32::from(vector) | (priority as u32) << 8)
-        },
-        IpiDestination::SelfOnly => {
-            (0, u32::from(vector) | ((priority as u32) << 8) | 1 << 18)
-        },
-        IpiDestination::AllCores => {
-            (0, u32::from(vector) | ((priority as u32) << 8) | 2 << 18)
-        },
-        IpiDestination::OtherCores => {
-            (0, u32::from(vector) | ((priority as u32) << 8) | 3 << 18)
-        },
+        IpiDestination::Core(core) => (
+            u32::from(core) << 24,
+            u32::from(vector) | (priority as u32) << 8,
+        ),
+        IpiDestination::SelfOnly => (0, u32::from(vector) | ((priority as u32) << 8) | 1 << 18),
+        IpiDestination::AllCores => (0, u32::from(vector) | ((priority as u32) << 8) | 2 << 18),
+        IpiDestination::OtherCores => (0, u32::from(vector) | ((priority as u32) << 8) | 3 << 18),
     };
 
     write(Register::InterruptCommand1, cmd.0);
@@ -165,7 +160,5 @@ pub unsafe fn read(register: Register) -> u32 {
     let base = LAPIC_BASE.load(Ordering::Relaxed);
     let addr = base + register as u64;
     let ptr = addr as *const u32;
-    unsafe {
-        ptr.read_volatile()
-    }
+    unsafe { ptr.read_volatile() }
 }

@@ -32,7 +32,7 @@ impl<const N: usize> Table<N> {
     }
 
     /// Set the GDT entry at the given index to the given descriptor.
-    /// 
+    ///
     /// # Warning
     /// If you set a system descriptor (i.e. a TSS descriptor), remember that it requires two GDT
     /// entries ! If you want to add a descriptor after a system descriptor, you need increment the

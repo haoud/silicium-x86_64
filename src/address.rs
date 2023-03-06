@@ -1,4 +1,8 @@
-use core::{ops::{Add, AddAssign, Sub, SubAssign}, iter::Step, fmt};
+use core::{
+    fmt,
+    iter::Step,
+    ops::{Add, AddAssign, Sub, SubAssign},
+};
 
 /// A canonical 64-bit virtual memory address.
 ///
@@ -166,7 +170,7 @@ impl Virtual {
     /// function does nothing.
     #[must_use]
     pub const fn page_align_down(&self) -> Self {
-        Self::new_truncate(self.0 &!0xFFF)
+        Self::new_truncate(self.0 & !0xFFF)
     }
 
     /// Checks if the address is aligned to a page boundary (4 KiB).
@@ -229,7 +233,7 @@ impl Step for Virtual {
         let steps = end.0.checked_sub(start.0)?;
         if !Virtual::is_canonical(start.0) || !Virtual::is_canonical(end.0) {
             panic!("Steps between non-canonical addresses");
-        } 
+        }
         usize::try_from(steps).ok()
     }
 
@@ -428,7 +432,6 @@ impl VirtualRange {
         self.start.0 < other.end.0 && other.start.0 < self.end.0
     }
 }
-
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]

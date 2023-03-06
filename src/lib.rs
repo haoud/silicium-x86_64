@@ -23,6 +23,7 @@ pub mod irq;
 pub mod lapic;
 pub mod paging;
 pub mod pic;
+pub mod pit;
 pub mod segment;
 pub mod serial;
 pub mod tss;
