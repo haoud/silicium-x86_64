@@ -97,7 +97,7 @@ pub unsafe fn setup(base: Virtual) {
 pub unsafe fn send_ipi(destination: IpiDestination, priority: IpiPriority, vector: u8) {
     let cmd = match destination {
         IpiDestination::Core(core) => {
-            (u32::from(core << 24), u32::from(vector) | (priority as u32) << 8)
+            (u32::from(core) << 24, u32::from(vector) | (priority as u32) << 8)
         },
         IpiDestination::SelfOnly => {
             (0, u32::from(vector) | (priority as u32) << 8 | 1 << 18)
