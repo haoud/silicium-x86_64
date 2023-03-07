@@ -386,7 +386,7 @@ pub unsafe extern "C" fn interrupt_enter() {
         # Prepare the argument for the handler
         mov rdi, rsp
 
-        # We pushed 19 registers, so the return address is at rsp + 16 * 8
+        # We pushed 16 registers, so the return address is at rsp + 16 * 8
         mov rax, [rsp + 16 * 8]
         jmp rax
         ",
