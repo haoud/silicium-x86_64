@@ -202,7 +202,6 @@ impl DescriptorFlags {
     }
 
     /// Build the descriptor flags.
-    /// TODO: Is this necessary to use `core::mem::swap` ?
     #[must_use]
     pub fn build(&mut self) -> Self {
         let mut result = Self::new();
