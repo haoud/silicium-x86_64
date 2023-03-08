@@ -145,6 +145,19 @@ pub unsafe fn send_ipi(destination: IpiDestination, priority: IpiPriority, vecto
     }
 }
 
+/// Send an end-of-interrupt signal to the local APIC. This function must be called after an
+/// interrupt has been handled. Otherwise, no local APIC interrupts will be triggered until this
+/// function is called.
+/// 
+/// # Safety
+/// This function is safe because sending an end-of-interrupt signal should not have any direct
+/// side effects that could lead to memory unsafety or undefined behavior. 
+pub fn send_eoi() {
+    unsafe {
+        write(Register::EndOfInterrupt, 0);
+    }
+}
+
 /// Write the given value to the given register.
 pub unsafe fn write(register: Register, value: u32) {
     let base = LAPIC_BASE.load(Ordering::Relaxed);
