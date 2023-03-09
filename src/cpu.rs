@@ -36,6 +36,37 @@ pub struct State {
     pub rsp: u64,
     pub ss: u64,
 }
+
+impl Default for State {
+    fn default() -> Self {
+        Self {
+            rbp: 0,
+            rbx: 0,
+            r12: 0,
+            r13: 0,
+            r14: 0,
+            r15: 0,
+            rax: 0,
+            rcx: 0,
+            rdx: 0,
+            rsi: 0,
+            rdi: 0,
+            r8: 0,
+            r9: 0,
+            r10: 0,
+            r11: 0,
+            address: 0,
+            number: 0,
+            code: 0,
+            rip: 0,
+            cs: 0,
+            rflags: 0,
+            rsp: 0,
+            ss: 0,
+        }
+    }
+}
+
 pub enum Privilege {
     Ring0 = 0,
     Ring1 = 1,

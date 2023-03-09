@@ -37,21 +37,7 @@ impl<const N: usize> Table<N> {
     /// If you set a system descriptor (i.e. a TSS descriptor), remember that it requires two GDT
     /// entries ! If you want to add a descriptor after a system descriptor, you need increment the
     /// index by 2.
-    /// ```rust
-    /// let mut gdt = Table::<8>::new();
-    /// gdt.set_descriptor(0, &Descriptor::NULL);
-    /// gdt.set_descriptor(1, &Descriptor::KERNEL_CODE64);
-    /// gdt.set_descriptor(2, &Descriptor::KERNEL_DATA);
-    /// gdt.set_descriptor(3, &Descriptor::USER_CODE64);
-    /// gdt.set_descriptor(4, &Descriptor::USER_DATA);
-    /// // This is a system descriptor (TSS descriptor), not initialized for simplicity
-    /// // of the example. It requires two GDT entries.
-    /// gdt.set_descriptor(5, &Descriptor::System(0, 0)));
-    /// // The 6th entry is used by the TSS descriptor
-    /// // The 7th entry is available and can be used by a new descriptor like this:
-    /// gdt.set_descriptor(7, &Descriptor::KERNEL_CODE64);
-    /// ```
-    ///
+    /// 
     /// # Panics
     /// This function panics if the index is out of bounds (i.e. greater than or equal to the
     /// GDT's capacity) or if the entry is already in use.
