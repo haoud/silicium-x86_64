@@ -3,11 +3,6 @@ use core::arch::asm;
 #[derive(Debug)]
 #[repr(C)]
 pub struct State {
-    // FS are saved because both the kernel and the user use it for TLS. Normally, the kernel should
-    // uses GS, but there is no way to change it without recompiling the rust compiler (and I don't
-    // know how to do it).
-    pub fs: u64,
-
     // Preserved registers
     pub rbp: u64,
     pub rbx: u64,
@@ -41,7 +36,6 @@ pub struct State {
     pub rsp: u64,
     pub ss: u64,
 }
-
 pub enum Privilege {
     Ring0 = 0,
     Ring1 = 1,
@@ -138,6 +132,85 @@ pub unsafe fn ltr(selector: u16) {
 /// This function is unsafe because it can cause undefined behavior if not correctly used.
 pub unsafe fn invlpg(address: u64) {
     asm!("invlpg [{}]", in(reg) address, options(readonly, nostack, preserves_flags));
+}
+
+/// Save the current CPU state into `from` and load the state from `to`.
+/// 
+/// When the saved state is restored, the CPU will return to the instruction after the call to
+/// `switch`, like if it had been a normal function call.
+/// 
+/// # Safety
+/// This function is unsafe because it can cause undefined behavior if the given states are not
+/// properly initialized or saved. This function only touches general purpose registers, the stack
+/// pointer, the instruction pointer and the rflags. It does not touch any segment registers or
+/// any other registers.
+pub unsafe fn switch(from: &mut State, to: &State) {
+    asm!(
+        "mov rax, rsp",     // Save the current stack pointer
+        "mov rsp, [{}]",    // Load the new stack pointer (from)
+
+        /* Push the registers (usually pushed by the CPU during an interrupt) */
+        "push 0",           // Null SS selector (because we are in kernel mode)
+        "push rax",         // Push the saved stack pointer
+        "pushfq",           // Push the current flags
+        "push 0x08",        // Push the kernel code segment selector
+        "push 1f",          // Push the return address
+
+        /* Push fake error code, interrupt number and skip address */
+        "push 0",
+        "push 0",
+        "push 0",
+
+        /* Save scratch registers */
+        "push r11",
+        "push r10",
+        "push r9",
+        "push r8",
+        "push rdi",
+        "push rsi",
+        "push rdx",
+        "push rcx",
+        "push rax",
+
+        /* Save preserved registers */
+        "push r15",
+        "push r14",
+        "push r13",
+        "push r12",
+        "push rbx",
+        "push rbp",
+
+        "mov rsp, [{}]",    // Load the new stack pointer (to)
+
+        /* Restore preserved registers */
+        "pop rbp",
+        "pop rbx",
+        "pop r12",
+        "pop r13",
+        "pop r14",
+        "pop r15",
+
+        /* Restore scratch registers */
+        "pop rax",
+        "pop rcx",
+        "pop rdx",
+        "pop rsi",
+        "pop rdi",
+        "pop r8",
+        "pop r9",
+        "pop r10",
+        "pop r11",
+
+        "add rsp, 24",      // Skip error code, number and fake return address
+        "iretq",            // Return to the new state
+
+        /* When a state is restored, it return to this address */
+        "1:",
+        in(reg) from,
+        in(reg) to,
+        out("rax") _,   
+        options(nostack, preserves_flags)
+    );
 }
 
 pub mod cr0 {
