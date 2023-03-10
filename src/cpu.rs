@@ -1,6 +1,6 @@
 use core::arch::asm;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[repr(C)]
 pub struct State {
     // Preserved registers
